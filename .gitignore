@@ -40,3 +40,6 @@ vignettes/*.pdf
 
 # Project File
 *.Rproj
+
+# Data Folder
+/data
