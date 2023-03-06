@@ -1,0 +1,41 @@
+---
+title: "Stuff"
+---
+
+```{r load-packages}
+library(readr)
+library(tidyverse)
+library(tsibble)
+```
+
+
+```{r load-data}
+
+schedules <- read_csv("data/OriginalSchedules.csv", locale = locale(encoding = "utf-16"))
+logs <- read_csv("data/GameLogs.csv", locale = locale(encoding = "utf-16"))
+mlb_schedule <- read_csv("data/2023_MLBSchedule.csv")
+
+```
+
+```{r clean-data}
+
+schedules_tsibble <- schedules %>% 
+  mutate(Date = as.Date(as.character(Date), format="%Y%m%d")) %>%
+  as_tsibble(index = Date, key = c(VisitingTeam, HomeTeam, VisitingTeamGameNumber, HomeTeamGameNumber))
+
+logs_tsibble <- logs %>%
+  mutate(Date = as.Date(as.character(Date), format="%Y%m%d")) %>% 
+  as_tsibble(index = Date, key = c(VisitingTeam, HomeTeam, VisitingTeamGameNumber, HomeTeamGameNumber))
+
+mlb_schedule_tsibble <- mlb_schedule %>%
+  mutate(game_date = as.Date(as.character(game_date), format="%Y%m%d")) %>%
+  as_tsibble(index = game_date, key = c(home_team, away_team, game_time))
+
+
+logs_tsibble <- logs_tsibble %>% left_join(schedules_tsibble)
+
+```
+
+```{r}
+
+```
