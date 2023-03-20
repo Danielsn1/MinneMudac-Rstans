@@ -7,12 +7,14 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
-theme_set(theme_bw())
 ```
 
 ```{r load_libraries}
 library(tidyverse)
 library(fpp3)
+library(glmnet)
+library(ggthemes)
+theme_set(theme_economist())
 ```
 
 ```{r load_data}
@@ -28,4 +30,78 @@ game_logs %>%
   filter(year(Date)==2001) %>%
   ggplot(aes(x=Date, y=Attendance))+
   geom_point()
+
+str(game_logs)
+```
+
+```{r twins_streaks_eda1}
+twins_logs <- game_logs %>%
+  filter(HomeTeam=="MIN", Attendance>0) %>%
+  mutate(win=HomeTeamScore>VistingTeamScore) %>%
+  mutate(Attendance=Attendance/1000)
+
+countStreaks <- function(wins){
+  streaks <- rep(0, length(wins))
+  count <- 0
+  for (i in 2:length(wins)){
+    if (wins[i-1] == TRUE) {
+      count = count + 1
+    } else {
+      count = 0
+    }
+    streaks[i] = streaks[i] + count
+  }
+  return(streaks)
+}
+
+twins_logs <- twins_logs %>%
+  mutate(streak = countStreaks(win))
+
+cor(twins_logs$Attendance, twins_logs$streak)
+twins_logs %>%
+  ggplot(aes(x=streak, y= Attendance))+
+  geom_point()+
+  geom_smooth()
+```
+
+It looks like win streak is not going to be a good predictor of attendance because the correlation is very low and the plot shows an almost horizontal line.
+
+```{r twins_streaks_eda2}
+twins_logs %>%
+  group_by(streak) %>%
+  ggplot(aes(x=Attendance, y=as.factor(streak)))+
+  geom_boxplot()
+```
+
+The boxplot shows that from a streak of 1-10 there is not much difference in attendance, but starting at 11 there is a significant difference in attendance. There is not as much data for these higher values, though, so this may not be reliable.
+
+```{r twins_streaks_eda3}
+twins_logs <- twins_logs %>%
+  mutate(high_streak = (streak>10))
+
+cor(twins_logs$high_streak, twins_logs$Attendance)
+twins_logs %>%
+  ggplot(aes(x=Attendance, y=high_streak))+
+  geom_boxplot()
+```
+
+Upon closer inspection is seems there are only eight instances of a streak being above 10, so there is not enough data to say with confidence that the differences seen in the boxplots are representative of a real scenario.
+
+```{r twins_lasso}
+y <- twins_logs$Attendance
+x <- makeX(twins_logs %>%
+             select(DayofWeek, HomeTeamGameNumber, HomeTeamScore, DayNight, VisitingTeamGameNumber, VistingTeamScore))
+
+cv_model <- cv.glmnet(x, y, alpha=1)
+lam <- cv_model$lambda.min
+plot(cv_model)
+
+twins_lasso <- glmnet(x, y, alpha=1, lambda=lam)
+coef(twins_lasso)
+```
+
+```{r twins_visitingteams}
+twins_logs %>%
+  ggplot(aes(x=Attendance, y=VisitingTeam))+
+  geom_boxplot()
 ```
