@@ -1,0 +1,98 @@
+---
+title: "Nathan EDA"
+author: "Nathan Daniels"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r load-packages}
+library(readr)
+library(tidyverse)
+library(tsibble)
+library(GGally)
+library(leaps)
+library(glmnet)
+```
+
+
+```{r load-data}
+
+schedules <- read_csv("../data/OriginalSchedules.csv", locale = locale(encoding = "utf-16"))
+logs <- read_csv("../data/GameLogs.csv", locale = locale(encoding = "utf-16"))
+mlb_schedule <- read_csv("../data/2023_MLBSchedule.csv")
+
+```
+
+Changed the dates into a R format
+
+```{r create-timeseries}
+
+schedules_tsibble <- schedules %>% 
+  mutate(Date = as.Date(as.character(Date), format="%Y%m%d")) %>%
+  as_tsibble(index = Date, key = c(VisitingTeam, HomeTeam, VisitingTeamGameNumber, HomeTeamGameNumber))
+
+logs_tsibble <- logs %>%
+  mutate(Date = as.Date(as.character(Date), format="%Y%m%d")) %>% 
+  as_tsibble(index = Date, key = c(VisitingTeam, HomeTeam, VisitingTeamGameNumber, HomeTeamGameNumber))
+
+mlb_schedule_tsibble <- mlb_schedule %>%
+  mutate(game_date = as.Date(as.character(game_date), format="%Y%m%d")) %>%
+  as_tsibble(index = game_date, key = c(home_team, away_team, game_time))
+
+
+logs_tsibble <- logs_tsibble %>% left_join(schedules_tsibble)
+
+```
+
+expanded the line score variable out into inning information for each team. Removed variables that only had one level.
+
+```{r clean-data}
+
+cleaned_logs <- logs_tsibble %>% mutate(
+  visiting_inning_1 = substring(VisitingTeam_LineScore,1,1),
+  visiting_inning_2 = substring(VisitingTeam_LineScore,2,2),
+  visiting_inning_3 = substring(VisitingTeam_LineScore,3,3),
+  visiting_inning_4 = substring(VisitingTeam_LineScore,4,4),
+  visiting_inning_5 = substring(VisitingTeam_LineScore,5,5),
+  visiting_inning_6 = substring(VisitingTeam_LineScore,6,6),
+  visiting_inning_7 = substring(VisitingTeam_LineScore,7,7),
+  visiting_inning_8 = substring(VisitingTeam_LineScore,8,8),
+  visiting_inning_9 = substring(VisitingTeam_LineScore,9,9),
+  home_inning_1 = substring(HomeTeam_LineScore,1,1),
+  home_inning_2 = substring(HomeTeam_LineScore,2,2),
+  home_inning_3 = substring(HomeTeam_LineScore,3,3),
+  home_inning_4 = substring(HomeTeam_LineScore,4,4),
+  home_inning_5 = substring(HomeTeam_LineScore,5,5),
+  home_inning_6 = substring(HomeTeam_LineScore,6,6),
+  home_inning_7 = substring(HomeTeam_LineScore,7,7),
+  home_inning_8 = substring(HomeTeam_LineScore,8,8),
+  home_inning_9 = substring(HomeTeam_LineScore,9,9),
+  extra_innings = ifelse(str_length(VisitingTeam_LineScore) > 9 | str_length(HomeTeam_LineScore) > 9, TRUE, FALSE)
+) %>%
+  select(-Forfeit_Information, -Protest_Information, -LFUmp_ID, -RFUmp_ID, -Acquisition_Information, -PostponementCancellation_Reason, -DateofMakeup)
+
+```
+
+```{r correlation}
+
+logs_tsibble %>% select(-(77:163), -VisitingTeam_LineScore, -HomeTeam_LineScore) %>% ggpairs(cardinality_threshold = 56)
+
+```
+
+```{r forward-backward-selection}
+
+set.seed(1995)
+
+train <- sample(c(T,F), nrow(cleaned_logs), replace = T)
+test <- !train
+
+regfit.best <- regsubsets(Attendance ~ ., data = cleaned_logs[train,], nvmax = 150)
+
+```
+
+```{r ridge-lasso}
+
+x <- model.matrix(Attendance ~ ., cleaned_logs)[,-1]
+y <- cleaned_logs$Attendance
+
+```
