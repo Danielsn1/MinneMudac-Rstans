@@ -83,7 +83,8 @@ for (team in unique(game_logs$HomeTeam)){
     filter(HomeTeam==team | VisitingTeam==team, Attendance>0) %>%
     mutate(win=ifelse(HomeTeam==team, HomeTeamScore>VistingTeamScore, VistingTeamScore>HomeTeamScore))
   temp <- temp %>%
-    mutate(streak=countStreaks(win))
+    mutate(streak=countStreaks(win))%>%
+    filter(HomeTeam==team)
   all_logs <- rbind(all_logs, temp)
 }
 all_logs <- all_logs %>%
@@ -97,16 +98,26 @@ all_logs <- all_logs %>%
   ggplot(aes(x=streak, y=Attendance))+
   geom_point()+
   geom_smooth()+
-   labs(x="Win Streak"))
+   labs(x="Win Streak")) |
+  plot_annotation(title="Relationship Between Win Streaks and Attendance")
 cor(all_logs$Attendance, all_logs$streak)
 ```
 
 ```{r twins_visitingteams}
 twins_logs %>%
   ggplot(aes(x=Attendance, y=VisitingTeam))+
-  geom_boxplot()
+  geom_boxplot()+
+  labs(title="Attendance at Twins Home Games")
 ```
 
 ```{r weather_data}
+park_codes <- read.csv("~/MinneMudac-Rstans/data/parkcode.csv")
+park_codes %>%
+  distinct(CITY, STATE)
 
+weather_MIN <- read.csv("~/MinneMudac-Rstans/data/USC00214884.csv") %>%
+  select(DATE, PRCP)%>%
+  mutate(DATE=as.Date(DATE, "%y%m%d"))
+names(weather_MIN) <- c("Date", "Prcp")
+twins_logs <- merge(twins_logs, weather_MIN)
 ```
