@@ -1,0 +1,397 @@
+---
+title: "MINNEMUDAC"
+output: html_document
+date: "2023-03-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r load_libraries}
+library(tidyverse)
+library(fpp3)
+library(cowplot)
+```
+
+```{r load_data}
+sched2023 <- read.csv("~/data/2023_MLBSchedule.csv")
+og_sched <- read.csv("~/data/OriginalSchedulesFixed.csv")
+game_logs <- read.csv("~/data/GameLogsFixed.csv")
+```
+
+```{r eda-gamelogs}
+game_logs %>%
+  as_tibble() %>%
+  mutate(Date=as.Date(as.character(Date), format="%Y%m%d")) %>%
+  filter(year(Date)==2001) %>%
+  ggplot(aes(x=Date, y=Attendance))+
+  geom_point()
+```
+
+
+Make tsibble for every single team, and then split out home team attendence.
+```{r Attendence}
+# Baltimore Orioles
+orioles_tbl <- game_logs %>%
+as_tibble() %>%
+filter(HomeTeam == 'BAL') %>%
+select(Attendance)
+
+ggplot(data = orioles_tbl, aes(x = Attendance)) +
+geom_histogram() +
+labs(x = "Values", y = "Frequency", title = "Baltimore Orioles Home Game Attendance")
+
+# Boston Red Sox
+redsox_tbl <- game_logs %>%
+as_tibble() %>%
+filter(HomeTeam == 'BOS') %>%
+select(Attendance)
+
+ggplot(data = redsox_tbl, aes(x = Attendance)) +
+geom_histogram() +
+labs(x = "Values", y = "Frequency", title = "Boston Red Sox Home Game Attendance")
+
+# Chicago White Sox
+whitesox_tbl <- game_logs %>%
+as_tibble() %>%
+filter(HomeTeam == 'CHA') %>%
+select(Attendance)
+
+ggplot(data = whitesox_tbl, aes(x = Attendance)) +
+geom_histogram() +
+labs(x = "Values", y = "Frequency", title = "Chicago White Sox Home Game Attendance")
+
+# Cincinnati Reds
+reds_tbl <- game_logs %>%
+as_tibble() %>%
+filter(HomeTeam == 'CIN') %>%
+select(Attendance)
+
+ggplot(data = reds_tbl, aes(x = Attendance)) +
+geom_histogram() +
+labs(x = "Values", y = "Frequency", title = "Cincinnati Reds Home Game Attendance")
+
+# Detroit Tigers
+tigers_tbl <- game_logs %>%
+as_tibble() %>%
+filter(HomeTeam == 'DET') %>%
+select(Attendance)
+
+ggplot(data = tigers_tbl, aes(x = Attendance)) +
+geom_histogram() +
+labs(x = "Values", y = "Frequency", title = "Detroit Tigers Home Game Attendance")
+
+# Houston Astros
+astros_tbl <- game_logs %>%
+as_tibble() %>%
+filter(HomeTeam == 'HOU') %>%
+select(Attendance)
+
+ggplot(data = astros_tbl, aes(x = Attendance)) +
+geom_histogram() +
+labs(x = "Values", y = "Frequency", title = "Houston Astros Home Game Attendance")
+
+# Los Angeles Angels
+angels_tbl <- game_logs %>%
+as_tibble() %>%
+filter(HomeTeam == 'ANA') %>%
+select(Attendance)
+
+ggplot(data = angels_tbl, aes(x = Attendance)) +
+geom_histogram() +
+labs(x = "Values", y = "Frequency", title = "Los Angeles Angels Home Game Attendance")
+
+# Los Angeles Dodgers
+dodgers_tbl <- game_logs %>%
+as_tibble() %>%
+filter(HomeTeam == 'LAN') %>%
+select(Attendance)
+
+ggplot(data = dodgers_tbl, aes(x = Attendance)) +
+geom_histogram() +
+labs(x = "Values", y = "Frequency", title = "Los Angeles Dodgers Home Game Attendance")
+
+# Miami Marlins
+marlins_tbl <- game_logs %>%
+as_tibble() %>%
+filter(HomeTeam == 'MIA') %>%
+select(Attendance)
+
+ggplot(data = marlins_tbl, aes(x = Attendance)) +
+geom_histogram() +
+labs(x = "Values", y = "Frequency", title = "Miami Marlins Home Game Attendance")
+
+# Seattle Mariners
+mariners_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'SEA') %>%
+  select(Attendance)
+
+ggplot(data = mariners_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Seattle Mariners Home Game Attendence")
+
+# Tampa Bay Rays
+rays_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'TBA') %>%
+  select(Attendance)
+
+ggplot(data = rays_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Tampa Bay Rays Home Game Attendence")
+
+# Texas Rangers
+rangers_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'TEX') %>%
+  select(Attendance)
+
+ggplot(data = rangers_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Texas Rangers Home Game Attendence")
+
+# Toronto Blue Jays
+bluejays_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'TOR') %>%
+  select(Attendance)
+
+ggplot(data = bluejays_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Toronto Blue Jays Home Game Attendence")
+
+ # Washington Nationals
+nationals_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'WAS') %>%
+  select(Attendance)
+
+ggplot(data = nationals_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Washington Nationals Home Game Attendance")
+
+# Milwaukee Brewers
+brewers_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'MIL') %>%
+  select(Attendance)
+
+ggplot(data = brewers_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Milwaukee Brewers Home Game Attendance")
+
+# San Diego Padres
+padres_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'SDN') %>%
+  select(Attendance)
+
+ggplot(data = padres_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "San Diego Padres Home Game Attendance")
+
+# Arizona Diamondbacks
+dbacks_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'ARI') %>%
+  select(Attendance)
+
+ggplot(data = dbacks_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Arizona Diamondbacks Home Game Attendance")
+
+# Colorado Rockies
+rockies_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'COL') %>%
+  select(Attendance)
+
+ggplot(data = rockies_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Colorado Rockies Home Game Attendance")
+
+# New York Mets
+mets_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'NYN') %>%
+  select(Attendance)
+
+ggplot(data = mets_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "New York Mets Home Game Attendance")
+
+# Philadelphia Phillies
+phillies_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'PHI') %>%
+  select(Attendance)
+
+ggplot(data = phillies_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Philadelphia Phillies Home Game Attendance")
+
+# Pittsburgh Pirates
+pirates_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'PIT') %>%
+  select(Attendance)
+
+ggplot(data = pirates_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Pittsburgh Pirates Home Game Attendance")
+
+# San Francisco Giants
+giants_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'SFN') %>%
+  select(Attendance)
+
+ggplot(data = giants_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "San Francisco Giants Home Game Attendance")
+
+# St. Louis Cardinals
+cardinals_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'SLN') %>%
+  select(Attendance)
+
+ggplot(data = cardinals_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "St. Louis Cardinals Home Game Attendance")
+
+# Cincinnati Reds
+reds_tbl <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'CIN') %>%
+  select(Attendance)
+
+ggplot(data = reds_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Cincinnati Reds Home Game Attendance")
+
+# Cleveland Guardians
+guardians_tbl <- game_logs %>%
+  as_tibble() %>%
+  filter(HomeTeam == 'CLE') %>%
+  select(Attendance)
+
+ggplot(data = guardians_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Cleveland Guardians Home Game Attendance")
+
+# Kansas City Royals
+royals_tbl <- game_logs %>%
+  as_tibble() %>%
+  filter(HomeTeam == 'KCA') %>%
+  select(Attendance)
+
+ggplot(data = royals_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Kansas City Royals Home Game Attendance")
+
+# Minnesota Twins
+twins_tbl <- game_logs %>%
+  as_tibble() %>%
+  filter(HomeTeam == 'MIN') %>%
+  select(Attendance)
+
+ggplot(data = twins_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Minnesota Twins Home Game Attendance")
+
+# Oakland Athletics
+athletics_tbl <- game_logs %>%
+  as_tibble() %>%
+  filter(HomeTeam == 'OAK') %>%
+  select(Attendance)
+
+ggplot(data = athletics_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Oakland Athletics Home Game Attendance")
+
+# Chicago Cubs
+cubs_tbl <- game_logs %>%
+  as_tibble() %>%
+  filter(HomeTeam == 'CHN') %>%
+  select(Attendance)
+
+ggplot(data = cubs_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Chicago Cubs Home Game Attendance")
+
+# Atlanta Braves
+braves_tbl <- game_logs %>%
+  as_tibble() %>%
+  filter(HomeTeam == 'ATL') %>%
+  select(Attendance)
+
+ggplot(data = braves_tbl, aes(x = Attendance)) +
+  geom_histogram() +
+  labs(x = "Values", y = "Frequency", title = "Atlanta Braves Home Game Attendance")
+
+```
+
+``` {r Day of Week}
+# Define a vector of MLB team abbreviations
+teams <- c("ANA", "ARI", "ATL", "BAL", "BOS", "CHN", "CIN", "CLE",
+           "COL", "DET", "HOU", "KCA", "LAN", "MIA", "MIL", "MIN",
+           "NYA", "NYN", "OAK", "PHI", "PIT", "SDN", "SEA", "SFN",
+           "SLN", "TBA", "TEX", "TOR", "WAS")
+
+# Loop over each team and create a plot
+for (team in teams) {
+  # Filter the data for the current team and select the attendance and day of week columns
+  team_dow <- game_logs %>%
+    as_tibble() %>%
+    filter(HomeTeam == team) %>%
+    select(Attendance, DayofWeek)
+  
+  # Create a plot for the current team and print it
+  p <- ggplot(team_dow, aes(x = DayofWeek, y = Attendance)) +
+    geom_boxplot() +
+    labs(title = paste("Distribution of", team, "Home Game Attendance by Day of Week"),
+         x = "Day",
+         y = "Attendance")
+  
+  print(p)
+}
+```
+
+```{r Time of Day}
+# Define a vector of MLB team abbreviations
+teams <- c("ANA", "ARI", "ATL", "BAL", "BOS", "CHN", "CIN", "CLE",
+           "COL", "DET", "HOU", "KCA", "LAN", "MIA", "MIL", "MIN",
+           "NYA", "NYN", "OAK", "PHI", "PIT", "SDN", "SEA", "SFN",
+           "SLN", "TBA", "TEX", "TOR", "WAS")
+
+# Loop over each team and create a plot
+for (team in teams) {
+  # Filter the data for the current team and select the attendance and day of week columns
+  team_dow <- game_logs %>%
+    as_tibble() %>%
+    filter(HomeTeam == team) %>%
+    select(Attendance, DayNight)
+  
+  # Create a plot for the current team and print it
+  p <- ggplot(team_dow, aes(x = DayNight, y = Attendance)) +
+    geom_boxplot() +
+    labs(title = paste("Distribution of", team, "Home Game Attendance by Time of Day"),
+         x = "Day/Night",
+         y = "Attendance")
+  
+  print(p)
+}
+```
+
+
+
+
+
+```{r summary stats}
+summary(game_logs)
+```
+
+
