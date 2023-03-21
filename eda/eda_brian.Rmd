@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r load_libraries}
@@ -14,6 +14,7 @@ library(tidyverse)
 library(fpp3)
 library(glmnet)
 library(ggthemes)
+library(patchwork)
 theme_set(theme_economist())
 ```
 
@@ -27,6 +28,7 @@ game_logs <- read.csv("~/MinneMudac-Rstans/data/GameLogsFixed.csv")
 game_logs %>%
   as_tibble() %>%
   mutate(Date=as.Date(as.character(Date), format="%Y%m%d")) %>%
+  mutate(Attendance=Attendance/1000) %>%
   filter(year(Date)==2001) %>%
   ggplot(aes(x=Date, y=Attendance))+
   geom_point()
@@ -36,9 +38,8 @@ str(game_logs)
 
 ```{r twins_streaks_eda1}
 twins_logs <- game_logs %>%
-  filter(HomeTeam=="MIN", Attendance>0) %>%
-  mutate(win=HomeTeamScore>VistingTeamScore) %>%
-  mutate(Attendance=Attendance/1000)
+  filter(HomeTeam=="MIN" | VisitingTeam=="MIN", Attendance>0) %>%
+  mutate(win=ifelse(HomeTeam=="MIN", HomeTeamScore>VistingTeamScore, VistingTeamScore>HomeTeamScore))
 
 countStreaks <- function(wins){
   streaks <- rep(0, length(wins))
@@ -73,35 +74,39 @@ twins_logs %>%
   geom_boxplot()
 ```
 
-The boxplot shows that from a streak of 1-10 there is not much difference in attendance, but starting at 11 there is a significant difference in attendance. There is not as much data for these higher values, though, so this may not be reliable.
+The boxplot shows that from a streak of 1-10 there is not much difference in attendance, but at 11 there is a significant difference in attendance. There is not as much data for streaks of 11, though, so this may not be reliable.
 
-```{r twins_streaks_eda3}
-twins_logs <- twins_logs %>%
-  mutate(high_streak = (streak>10))
+```{r allteams_streaks}
+all_logs <- twins_logs
+for (team in unique(game_logs$HomeTeam)){
+  temp <- game_logs %>%
+    filter(HomeTeam==team | VisitingTeam==team, Attendance>0) %>%
+    mutate(win=ifelse(HomeTeam==team, HomeTeamScore>VistingTeamScore, VistingTeamScore>HomeTeamScore))
+  temp <- temp %>%
+    mutate(streak=countStreaks(win))
+  all_logs <- rbind(all_logs, temp)
+}
+all_logs <- all_logs %>%
+  select(-win)
 
-cor(twins_logs$high_streak, twins_logs$Attendance)
-twins_logs %>%
-  ggplot(aes(x=Attendance, y=high_streak))+
-  geom_boxplot()
-```
-
-Upon closer inspection is seems there are only eight instances of a streak being above 10, so there is not enough data to say with confidence that the differences seen in the boxplots are representative of a real scenario.
-
-```{r twins_lasso}
-y <- twins_logs$Attendance
-x <- makeX(twins_logs %>%
-             select(DayofWeek, HomeTeamGameNumber, HomeTeamScore, DayNight, VisitingTeamGameNumber, VistingTeamScore))
-
-cv_model <- cv.glmnet(x, y, alpha=1)
-lam <- cv_model$lambda.min
-plot(cv_model)
-
-twins_lasso <- glmnet(x, y, alpha=1, lambda=lam)
-coef(twins_lasso)
+(all_logs %>%
+  ggplot(aes(x=Attendance, y=as.factor(streak)))+
+  geom_boxplot()+
+    labs(y="Win Streak")) |
+(all_logs %>%
+  ggplot(aes(x=streak, y=Attendance))+
+  geom_point()+
+  geom_smooth()+
+   labs(x="Win Streak"))
+cor(all_logs$Attendance, all_logs$streak)
 ```
 
 ```{r twins_visitingteams}
 twins_logs %>%
   ggplot(aes(x=Attendance, y=VisitingTeam))+
   geom_boxplot()
+```
+
+```{r weather_data}
+
 ```
