@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(fpp3)
 library(cowplot)
+library(forcats)
 ```
 
 ```{r load_data}
@@ -341,6 +342,9 @@ teams <- c("ANA", "ARI", "ATL", "BAL", "BOS", "CHN", "CIN", "CLE",
            "NYA", "NYN", "OAK", "PHI", "PIT", "SDN", "SEA", "SFN",
            "SLN", "TBA", "TEX", "TOR", "WAS")
 
+# Define the order of the days of the week
+days_order <- c("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+
 # Loop over each team and create a plot
 for (team in teams) {
   # Filter the data for the current team and select the attendance and day of week columns
@@ -348,6 +352,9 @@ for (team in teams) {
     as_tibble() %>%
     filter(HomeTeam == team) %>%
     select(Attendance, DayofWeek)
+  
+  # Set the order of the days of the week as a factor
+  team_dow$DayofWeek <- factor(team_dow$DayofWeek, levels = days_order)
   
   # Create a plot for the current team and print it
   p <- ggplot(team_dow, aes(x = DayofWeek, y = Attendance)) +
@@ -358,6 +365,7 @@ for (team in teams) {
   
   print(p)
 }
+
 ```
 
 ```{r Time of Day}
@@ -366,7 +374,6 @@ teams <- c("ANA", "ARI", "ATL", "BAL", "BOS", "CHN", "CIN", "CLE",
            "COL", "DET", "HOU", "KCA", "LAN", "MIA", "MIL", "MIN",
            "NYA", "NYN", "OAK", "PHI", "PIT", "SDN", "SEA", "SFN",
            "SLN", "TBA", "TEX", "TOR", "WAS")
-
 # Loop over each team and create a plot
 for (team in teams) {
   # Filter the data for the current team and select the attendance and day of week columns
