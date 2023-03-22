@@ -12,6 +12,7 @@ library(tsibble)
 library(GGally)
 library(leaps)
 library(glmnet)
+library(patchwork)
 ```
 
 
@@ -48,52 +49,39 @@ expanded the line score variable out into inning information for each team. Remo
 
 ```{r clean-data}
 
-logs_tsibble %>% mutate(
-  visiting_inning_1 = substring(VisitingTeam_LineScore,1,1),
-  visiting_inning_2 = substring(VisitingTeam_LineScore,2,2),
-  visiting_inning_3 = substring(VisitingTeam_LineScore,3,3),
-  visiting_inning_4 = substring(VisitingTeam_LineScore,4,4),
-  visiting_inning_5 = substring(VisitingTeam_LineScore,5,5),
-  visiting_inning_6 = substring(VisitingTeam_LineScore,6,6),
-  visiting_inning_7 = substring(VisitingTeam_LineScore,7,7),
-  visiting_inning_8 = substring(VisitingTeam_LineScore,8,8),
-  visiting_inning_9 = substring(VisitingTeam_LineScore,9,9),
-  home_inning_1 = substring(HomeTeam_LineScore,1,1),
-  home_inning_2 = substring(HomeTeam_LineScore,2,2),
-  home_inning_3 = substring(HomeTeam_LineScore,3,3),
-  home_inning_4 = substring(HomeTeam_LineScore,4,4),
-  home_inning_5 = substring(HomeTeam_LineScore,5,5),
-  home_inning_6 = substring(HomeTeam_LineScore,6,6),
-  home_inning_7 = substring(HomeTeam_LineScore,7,7),
-  home_inning_8 = substring(HomeTeam_LineScore,8,8),
-  home_inning_9 = substring(HomeTeam_LineScore,9,9),
-  extra_innings = ifelse(str_length(VisitingTeam_LineScore) > 9 | str_length(HomeTeam_LineScore) > 9, TRUE, FALSE)
-) 
+cleaned_logs <- logs_tsibble%>%
+  as_tibble() %>%
+  arrange(Date) %>%
+  select(NumberofGames, DayofWeek, VisitingTeam, VisitingTeamLeague, VisitingTeamGameNumber, HomeTeam, HomeTeamLeague, HomeTeamGameNumber, DayNight, Attendance, Date, BallParkID)
 
-test <- logs_tsibble %>%
-  select(HomeTeam, VisitingTeam, VisitingTeamGameNumber, HomeTeamGameNumber) %>%
+# Pivoted Tibble
+
+pivoted_logs <- cleaned_logs %>% 
+  pivot_longer(c(VisitingTeam, HomeTeam), names_to = "Visiting_Home", values_to = "Team") %>%
+  mutate(GameNumber = ifelse(Visiting_Home == "VisitingTeam", VisitingTeamGameNumber, HomeTeamGameNumber),
+         Leauge = ifelse(Visiting_Home == "VisitingTeam", VisitingTeamLeague, HomeTeamLeague)) %>%
+  select(-HomeTeamGameNumber, -VisitingTeamGameNumber, -VisitingTeamLeague, -HomeTeamLeague)
+
+
+test <- pivoted_logs %>%
+  select(Team, GameNumber, Date, Visiting_Home) %>%
   arrange(Date)
 
+teams <- unique(test$Team)
 
-
-
-
-
-teams <- unique(test$HomeTeam)
-
-total_tibble <- test %>% filter(is.na(HomeTeam))
+total_tibble <- test %>% filter(is.na(Team))
 
 for (team in teams) {
   team_tibble <- test %>% 
-    filter(HomeTeam == team | VisitingTeam == team) %>%
-    mutate(home_streak = -1,
-           away_streak = -1)
+    filter(Team == team) %>%
+    mutate(home_streak = 0,
+           away_streak = 0)
   
   for (i in 1:nrow(team_tibble)){
     row <- team_tibble[i,]
     
-    if (row$VisitingTeam == team){
-      if (row$away_streak == -1){
+    if (row$Visiting_Home == "VisitingTeam"){
+      if (i == 1){
         team_tibble$away_streak[i] <- 1
       } 
       else{
@@ -101,8 +89,8 @@ for (team in teams) {
       } 
       team_tibble$home_streak[i] <- 0;
     }
-    else if (row$HomeTeam == team){
-      if (row$home_streak == -1){
+    else{
+      if (i == 1){
         team_tibble$home_streak[i] <- 1
       } 
       else{
@@ -115,29 +103,42 @@ for (team in teams) {
   total_tibble <- bind_rows(total_tibble, team_tibble)
 }
 
-cleaned_logs <- logs_tsibble%>%
-  as_tibble() %>%
-  arrange(Date) %>%
-  select(NumberofGames, DayofWeek, VisitingTeam, VisitingTeamLeague, VisitingTeamGameNumber, HomeTeam, HomeTeamLeague, HomeTeamGameNumber, DayNight, Attendance, Date)
-
-# Pivoted Tibble
-
-cleaned_logs %>% 
-  pivot_longer(c(VisitingTeam, HomeTeam), names_to = "Visiting_Home", values_to = "Team") %>%
-  mutate(GameNumber = ifelse(Visiting_Home == "VisitingTeam", VisitingTeamGameNumber, HomeTeamGameNumber),
-         Leauge = ifelse(Visiting_Home == "VisitingTeam", VisitingTeamLeague, HomeTeamLeague)) %>%
-  select(-HomeTeamGameNumber, -VisitingTeamGameNumber, -VisitingTeamLeague, -HomeTeamLeague)
+completed_logs <- full_join(total_tibble, pivoted_logs)
 
 ```
 
 ```{r correlation}
 
-cleaned_logs %>%
-  ggplot(aes(x=VisitingTeamGameNumber, y = Attendance)) + 
-  geom_point()
-cleaned_logs %>%
-  ggplot(aes(x=HomeTeamGameNumber, y = Attendance)) + 
-  geom_point()
+box <- completed_logs %>%
+  ggplot(aes(x = Attendance, y = as.factor(home_streak))) + 
+  geom_boxplot() 
+hist <- completed_logs %>%
+  ggplot(aes(x=home_streak)) +
+  geom_histogram()
+
+box/hist
+
+box <- completed_logs %>%
+  ggplot(aes(x = Attendance, y = as.factor(away_streak))) + 
+  geom_boxplot() 
+hist <- completed_logs %>%
+  ggplot(aes(x=away_streak)) +
+  geom_histogram()
+
+box/hist
+
+```
+
+```{r distance}
+
+unique(cleaned_logs$BallParkID)
+
+home_stadiums <- data.frame(
+  team = c("NYN",),
+  home_stadium = c("")
+)
+
+
 
 ```
 
