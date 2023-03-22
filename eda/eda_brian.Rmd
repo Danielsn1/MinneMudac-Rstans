@@ -15,6 +15,8 @@ library(fpp3)
 library(glmnet)
 library(ggthemes)
 library(patchwork)
+library(plyr)
+library(sqldf)
 theme_set(theme_economist())
 ```
 
@@ -25,10 +27,12 @@ game_logs <- read.csv("~/MinneMudac-Rstans/data/GameLogsFixed.csv")
 ```
 
 ```{r eda-gamelogs}
-game_logs %>%
+game_logs <- game_logs %>%
   as_tibble() %>%
   mutate(Date=as.Date(as.character(Date), format="%Y%m%d")) %>%
-  mutate(Attendance=Attendance/1000) %>%
+  mutate(Attendance=Attendance/1000)
+
+game_logs %>%
   filter(year(Date)==2001) %>%
   ggplot(aes(x=Date, y=Attendance))+
   geom_point()
@@ -111,13 +115,65 @@ twins_logs %>%
 ```
 
 ```{r weather_data}
-park_codes <- read.csv("~/MinneMudac-Rstans/data/parkcode.csv")
-park_codes %>%
-  distinct(CITY, STATE)
+#Create park codes and attach location identifier via mapvalues function
+#The location identifier comes from a string in the weather station name
+park_codes <- read.csv("~/MinneMudac-Rstans/data/parkcode.csv") %>%
+  select(PARKID, CITY) %>%
+  mutate(Loc=CITY)
+names(park_codes) <- c("ParkID", "City", "Loc")
+park_codes$Loc <- mapvalues(park_codes$Loc,
+                            from=c("Collinwood", "Covington", "Dunedin", "Dyersville", "Geauga Lake", "Gloucester City", "Harrison", "Irondequoit", "Lake Buena Vista", "London", "Ludlow", "Maspeth", "Middletown", "Bloomington", "Newburgh Township", "Brooklyn", "Queens", "Providence", "Springfield", "Three Rivers", "Troy", "Warwick", "Watervliet", "Weehawken", "West New York", "New York"),
+                            to=c("Cleveland", "Cincinnati", "Tampa", "Dubuque", "Cleveland", "Philadelphia", "Newark", "Rochester", "Orlando", "Heathrow", "Cincinnati", "JFK", "Hartford", "Minneapolis", "Evansville", "JFK", "JFK", "Rhode Island", "Hartford", "Syracuse", "Albany", "Rhode Island", "Albany", "JFK", "JFK", "JFK"))
 
-weather_MIN <- read.csv("~/MinneMudac-Rstans/data/USC00214884.csv") %>%
-  select(DATE, PRCP)%>%
-  mutate(DATE=as.Date(DATE, "%y%m%d"))
-names(weather_MIN) <- c("Date", "Prcp")
-twins_logs <- merge(twins_logs, weather_MIN)
+
+#Combine two weather datasets into one
+weather1 <- read.csv("~/MinneMudac-Rstans/data/weather1.csv")
+weather2 <- read.csv("~/MinneMudac-Rstans/data/weather2.csv")
+weather <- rbind(weather1, weather2) %>%
+  select(DATE, PRCP, NAME) %>%
+  mutate(DATE=as.Date(DATE))
+names(weather) <- c("Date", "Prcp", "Name")
+
+
+#Merge weather and park codes datasets to add ParkID column to weather
+park_weather <- sqldf("
+                      SELECT *
+                      FROM weather, park_codes
+                      WHERE Name LIKE '%'||Loc||'%'
+                      ") %>%
+  select(Date, Prcp, ParkID)
+
+
+#Join park_weather and all_logs by ParkID and Date
+all_logs <- all_logs %>%
+  select(names(all_logs)[1:19])
+all_logs <- merge(all_logs, park_weather, by.x=c("Date", "BallParkID"), by.y=c("Date", "ParkID"), all.x=TRUE)
+
+#Create dummy variable for rain/no rain
+all_logs <- all_logs %>%
+  mutate(Rain=ifelse(Prcp>0, 1, 0))
+```
+
+```{r eda_weather1}
+(all_logs %>%
+  filter(!is.na(Prcp)) %>%
+  ggplot(aes(x=Attendance, fill=as.factor(Rain)))+
+  geom_density(alpha=0.5)+
+   labs(y="Density", fill="")+
+   scale_fill_discrete(labels=c("No Rain", "Rain"))) /
+(all_logs %>%
+   filter(!is.na(Prcp)) %>%
+   mutate(Rain=ifelse(Rain==1, "Rain", "No Rain")) %>%
+   ggplot(aes(x=Attendance, y=(Rain)))+
+   geom_boxplot()+
+   labs(y="")) /
+  plot_annotation(title="Distribution of Attendance Based on Weather")
+```
+
+```{r eda_weather2}
+all_logs %>%
+  filter(!is.na(Prcp), Prcp>0) %>%
+  ggplot(aes(x=Prcp, y=Attendance))+
+  geom_point()+
+  geom_smooth()
 ```
