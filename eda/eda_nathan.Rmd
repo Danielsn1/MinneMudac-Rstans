@@ -133,9 +133,15 @@ box/hist
 
 unique(cleaned_logs$BallParkID)
 
-home_stadiums <- data.frame(
+team_locations <- data.frame(
   team = c("NYN",),
-  home_stadium = c("")
+  team_location = c()
+)
+
+stadium_locations <- data.frame(
+  stadium = unique(completed_logs$BallParkID),
+  stadium_location = c(c())
+  
 )
 
 
@@ -146,16 +152,49 @@ home_stadiums <- data.frame(
 
 set.seed(1995)
 
-train <- sample(c(T,F), nrow(cleaned_logs), replace = T)
+train <- sample(c(T,F), nrow(completed_logs), replace = T)
 test <- !train
 
-regfit.best <- regsubsets(Attendance ~ ., data = cleaned_logs[train,], nvmax = 150)
+reg.best <- regsubsets(Attendance ~ ., data = completed_logs[train,], nvmax = 100,
+                           really.big = T)
+
+forward.best <- regsubsets(Attendance ~ ., data = completed_logs[train,], nvmax = 100,
+                           really.big = T, method = "forward")
+
+backward.best <- regsubsets(Attendance ~ ., data = completed_logs[train,], nvmax = 100,
+                            really.big = T, method = "backward")
+
+fwd.sumry <- summary(forward.best)
+bkwd.sumry <- summary(backward.best)
+
+fwd.sumry$bic
+bkwd.sumry$bic
+
+which.min(fwd.sumry$bic)
+which.min(bkwd.sumry$bic)
+
+coef(backward.best, 65)
+coef(forward.best, 71)
 
 ```
 
 ```{r ridge-lasso}
 
-x <- model.matrix(Attendance ~ ., cleaned_logs)[,-1]
-y <- cleaned_logs$Attendance
+x <- model.matrix(Attendance ~ ., completed_logs)[,-1]
+y <- completed_logs$Attendance
+
+grid <- 10^ seq (10, -2, length = 100)
+
+lasso.mod <- glmnet (x[train , ], y[train], alpha = 1,
+  lambda = grid)
+
+set.seed (1)
+cv.out <- cv.glmnet(x[train , ], y[train], alpha = 1)
+
+bestlam <- cv.out$lambda.min
+lasso.pred <- predict (lasso.mod, s = bestlam,
+  newx = x[test, ])
+
+
 
 ```
