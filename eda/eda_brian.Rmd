@@ -145,6 +145,12 @@ twins_logs %>%
   ggplot(aes(x=Attendance, y=reorder(VisitingTeam, Attendance, na.rm=TRUE)))+
   geom_boxplot()+
   labs(title="Attendance at Twins Home Games", y="Visiting Team")
+
+twins_logs %>%
+  filter(BallParkID=="MIN04") %>%
+  ggplot(aes(x=Attendance, y=reorder(VisitingTeam, Attendance, na.rm=TRUE)))+
+  geom_boxplot()+
+  labs(title="Attendance at Target Field", y="Visiting Team")
 ```
 
 ```{r weather_data}
@@ -223,6 +229,18 @@ all_logs$DayofWeek <- factor(all_logs$DayofWeek, levels=c("Sun", "Mon", "Tue", "
   geom_boxplot()+
   labs(x="", y="Attendance")) |
   plot_annotation(title="Attendance During Year/Week")
+
+(all_logs %>%
+  filter(HomeTeam=="MIN") %>%
+  ggplot(aes(x=Month, y=Attendance))+
+  geom_boxplot()+
+  labs(x="", y="Attendance")) |
+(all_logs %>%
+  filter(HomeTeam=="MIN") %>%
+  ggplot(aes(x=DayofWeek, y=Attendance))+
+  geom_boxplot()+
+  labs(x="", y="Attendance")) |
+  plot_annotation(title="Twins Attendance During Year/Week")
 ```
 
 ```{r testing_models}
