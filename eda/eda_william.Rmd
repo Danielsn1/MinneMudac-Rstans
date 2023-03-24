@@ -1,0 +1,168 @@
+---
+title: "EDA"
+author: "William"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+theme_set(theme_bw())
+```
+
+```{r load_libraries}
+library(tidyverse)
+library(fpp3)
+library(ggthemes)
+
+theme_set(theme_economist())
+```
+
+```{r load_data}
+sched2023 <- read.csv("~/MinneMudac-Rstans/data/2023_MLBSchedule.csv")
+og_sched <- read.csv("~/MinneMudac-Rstans/data/OriginalSchedulesFixed.csv")
+game_logs <- read.csv("~/MinneMudac-Rstans/data/GameLogsFixed.csv")
+```
+
+```{r gamelogs_tsbl}
+game_logs_tsbl <- game_logs %>%
+  as_tibble() %>%
+  mutate(Date=as.Date(as.character(Date), format="%Y%m%d")) %>%
+  as_tsibble(index = Date, key = c(HomeTeam, NumberofGames))
+```
+
+```{r outlier_search}
+game_logs_tbbl <- game_logs %>%
+  as_tibble() %>% mutate(Date=as.Date(as.character(Date), format="%Y%m%d"))
+
+game_logs_tbbl_twns <-
+  game_logs_tbbl %>%
+  filter(HomeTeam == "MIN")
+
+game_logs_tbbl_twns %>% ggplot() +
+  geom_boxplot(aes(Attendance))
+
+game_logs_tbbl %>% ggplot() +
+  geom_boxplot(aes(Attendance))
+
+game_logs_tbbl_twns %>%
+  mutate(year = format(Date, "%Y")) %>%
+  ggplot() +
+  geom_boxplot(aes(y=Attendance, x = year))
+
+game_logs_tbbl %>%
+  mutate(year = format(Date, "%Y")) %>%
+  ggplot() +
+  geom_boxplot(aes(y=Attendance, x = year))
+```
+
+```{r teams_playing}
+games_logs_players_HT <- game_logs %>% filter(!is.na(Attendance)) %>% group_by(HomeTeam) %>% summarise(AttendanceHT = mean(Attendance))
+games_logs_players_HT %>% ggplot() + geom_bar(aes(x=reorder(HomeTeam, AttendanceHT), y=AttendanceHT), stat = "identity")
+
+game_logs_players_VT <- game_logs %>% filter(!is.na(Attendance)) %>% group_by(VisitingTeam) %>% summarise(AttendanceVT = mean(Attendance)) 
+
+game_logs_by_team <- full_join(games_logs_players_HT, game_logs_players_VT, by = c("HomeTeam" = "VisitingTeam"))
+game_logs_by_team <- game_logs_by_team %>% mutate(Attendance_all = AttendanceHT + AttendanceVT)
+
+game_logs_by_team %>% ggplot() + geom_bar(aes(x=reorder(HomeTeam, Attendance_all), y=Attendance_all), stat = "identity")
+```
+```{r Umpires}
+game_logs %>% group_by(HomePlateUmp_ID) %>% filter(!is.na(Attendance)) %>% summarise(Attendance = median(Attendance)) %>% ggplot() + 
+  geom_bar(aes(x = reorder(HomePlateUmp_ID, Attendance), y = Attendance), stat = "identity") +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) + xlab("Homeplate Umpire") + labs(title = "Attendance by Homeplate Umpire")
+
+game_logs %>% group_by(X1BUmp_ID) %>% filter(!is.na(Attendance)) %>% summarise(Attendance = median(Attendance)) %>% ggplot() + 
+  geom_bar(aes(x = reorder(X1BUmp_ID, Attendance), y = Attendance), stat = "identity")
+game_logs %>% group_by(X2BUmp_ID) %>% filter(!is.na(Attendance)) %>% summarise(Attendance = median(Attendance)) %>% ggplot() + 
+  geom_bar(aes(x = reorder(X2BUmp_ID, Attendance), y = Attendance), stat = "identity")
+game_logs %>% group_by(X3BUmp_ID) %>% filter(!is.na(Attendance)) %>% summarise(Attendance = median(Attendance)) %>% ggplot() + 
+  geom_bar(aes(x = reorder(X3BUmp_ID, Attendance), y = Attendance), stat = "identity")
+```
+
+```{r Managers}
+game_logs %>% group_by(HomeTeamManager_ID) %>% filter(!is.na(Attendance)) %>% summarise(Attendance = median(Attendance)) %>% ggplot() + 
+  geom_bar(aes(x = reorder(HomeTeamManager_ID, Attendance), y = Attendance), stat = "identity") +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) + xlab("")
+
+game_logs %>% group_by(VisitingTeamManager_ID) %>% filter(!is.na(Attendance)) %>% summarise(Attendance = median(Attendance)) %>% ggplot() + 
+  geom_bar(aes(x = reorder(VisitingTeamManager_ID, Attendance), y = Attendance), stat = "identity") +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) + xlab("")
+```
+
+
+```{r gamelogs_twns}
+game_logs_twns <- game_logs %>%
+  as_tibble() %>%
+  mutate(Date=as.Date(as.character(Date), format="%Y%m%d")) %>%
+  filter(HomeTeam == "MIN") %>%
+  as_tsibble(index = Date, key = c(NumberofGames))
+#game_logs_twns <- game_logs_tsbl %>% filter(HomeTeam == "MIN")
+```
+
+
+```{r unitroot}
+game_logs_twns %>% features(Attendance, unitroot_ndiffs)
+game_logs_tsbl %>% features(Attendance, unitroot_ndiffs)
+
+game_logs_twns %>% features(Attendance, unitroot_ndiffs)
+game_logs_tsbl %>% features(Attendance, unitroot_ndiffs)
+
+game_logs_twns %>% features(Attendance, unitroot_nsdiffs)
+#game_logs_twns %>% features(difference(Attendance,30), unitroot_nsdiffs)
+
+game_logs_tsbl %>% features(Attendance, unitroot_nsdiffs)
+
+```
+
+```{r autoplots_gamelogs_twns}
+
+get_year <- function(date_obj) {
+  year <- format(date_obj, "%Y")
+  return(as.numeric(year))
+}
+
+
+game_logs_twns %>% autoplot(Attendance)
+#Looks to be a yearly seasonality but is messy with the # of games
+
+
+twns_games_0 <- game_logs_twns %>% filter(NumberofGames == 0)
+
+#Where # of games == 0
+twns_games_0 %>% autoplot(Attendance) +
+  labs(title = "Twins Attendance Over Time") +
+  xlab("Date")
+#Def annual seasonality
+
+twns_pre_2010 <- game_logs_twns %>% filter(Date <= as.Date("2010-01-01"))
+twns_post_2010 <- game_logs_twns %>% filter(Date >= as.Date("2010-01-01"))
+
+#Pre 2010
+twns_pre_2010  %>% filter(NumberofGames == 0) %>% autoplot(Attendance)
+twns_pre_2010 %>% filter(NumberofGames == 0) %>% filter(!is.na(Date)) %>% fill_gaps() %>% filter(get_year(Date) == 2012) %>% gg_season(Attendance)
+
+
+#Post 2010
+twns_post_2010 %>% filter(NumberofGames == 0) %>% autoplot(Attendance)
+twns_post_2010 %>% filter(NumberofGames == 0) %>% fill_gaps() %>% gg_season(Attendance)
+
+#twn
+
+```
+
+
+```{r twns_dcmp}
+twns_games_0_test <- twns_games_0 %>%
+  as_tibble %>%
+  filter(!is.na(Attendance)) %>%
+  filter(Date == min(Date) | Date == max(Date))
+
+twns_games_0_test
+
+twns_0_pre_gap <- twns_games_0 %>% filter(Date <= as.Date("2019-09-29")) %>% fill_gaps()
+
+mdl_twns_0_pre_gap <- twns_0_pre_gap %>% model(
+  decomp = STL(Attendance~season(window=365),robust = T)
+)
+```
