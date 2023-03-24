@@ -13,6 +13,7 @@ library(tidyverse)
 library(fpp3)
 library(cowplot)
 library(forcats)
+library(ggthemes)
 ```
 
 ```{r load_data}
@@ -51,7 +52,7 @@ select(Attendance)
 
 ggplot(data = redsox_tbl, aes(x = Attendance)) +
 geom_histogram() +
-labs(x = "Values", y = "Frequency", title = "Boston Red Sox Home Game Attendance")
+labs(x = "Values", y = "Frequency", title = "Boston Red Sox Home Game Attendance") + theme(plot.title = element_text(margin = margin(b = 10))) + theme_economist()
 
 # Chicago White Sox
 whitesox_tbl <- game_logs %>%
@@ -121,7 +122,7 @@ select(Attendance)
 
 ggplot(data = marlins_tbl, aes(x = Attendance)) +
 geom_histogram() +
-labs(x = "Values", y = "Frequency", title = "Miami Marlins Home Game Attendance")
+labs(x = "Values", y = "Frequency", title = "Miami Marlins Home Game Attendance") 
 
 # Seattle Mariners
 mariners_tbl <- game_logs %>% 
@@ -141,7 +142,9 @@ rays_tbl <- game_logs %>%
 
 ggplot(data = rays_tbl, aes(x = Attendance)) +
   geom_histogram() +
-  labs(x = "Values", y = "Frequency", title = "Tampa Bay Rays Home Game Attendence")
+  labs(x = "Values", y = "Frequency", title = "Tampa Bay Rays Home Game Attendence") +
+  theme_economist() +
+  theme(plot.title = element_text(margin = margin(b = 10)))
 
 # Texas Rangers
 rangers_tbl <- game_logs %>% 
@@ -301,7 +304,9 @@ twins_tbl <- game_logs %>%
 
 ggplot(data = twins_tbl, aes(x = Attendance)) +
   geom_histogram() +
-  labs(x = "Values", y = "Frequency", title = "Minnesota Twins Home Game Attendance")
+  labs(x = "Values", y = "Frequency", title = "Minnesota Twins Home Game Attendance") +
+  theme_economist() +
+  theme(plot.title = element_text(margin = margin(b = 10)))
 
 # Oakland Athletics
 athletics_tbl <- game_logs %>%
@@ -358,12 +363,13 @@ for (team in teams) {
   
   # Create a plot for the current team and print it
   p <- ggplot(team_dow, aes(x = DayofWeek, y = Attendance)) +
-    geom_boxplot() +
-    labs(title = paste("Distribution of", team, "Home Game Attendance by Day of Week"),
-         x = "Day",
-         y = "Attendance")
-  
-  print(p)
+  geom_boxplot() +
+  labs(title = paste(team, "Home Game Attendance by Day of Week"),
+       x = "Day",
+       y = "Attendance") +
+  theme_economist() + theme(plot.title = element_text(margin = margin(b = 10)))
+
+print(p)
 }
 
 ```
@@ -383,13 +389,14 @@ for (team in teams) {
     select(Attendance, DayNight)
   
   # Create a plot for the current team and print it
-  p <- ggplot(team_dow, aes(x = DayNight, y = Attendance)) +
-    geom_boxplot() +
-    labs(title = paste("Distribution of", team, "Home Game Attendance by Time of Day"),
-         x = "Day/Night",
-         y = "Attendance")
-  
-  print(p)
+p <- ggplot(team_dow, aes(x = DayNight, y = Attendance)) +
+  geom_boxplot() +
+  labs(title = paste("Distribution of", team, "Home Game Attendance by Time of Day"),
+       x = "Day/Night",
+       y = "Attendance") +
+  theme_economist()
+
+print(p)
 }
 ```
 
