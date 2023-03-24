@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r Distance}
+library(tidyverse)
+
 teams <- c("ANA", "ARI", "ATL", "BAL", "BOS", "CHN", "CIN", "CLE",
            "COL", "DET", "HOU", "KCA", "LAN", "MIA", "MIL", "MIN",
            "NYA", "NYN", "OAK", "PHI", "PIT", "SDN", "SEA", "SFN",
@@ -21,6 +23,7 @@ mlb_teams_lat_long <- list(
   "ATL" = list(latitude = 33.7340, longitude = -84.3899),
   "BAL" = list(latitude = 39.2843, longitude = -76.6200),
   "BOS" = list(latitude = 42.3467, longitude = -71.0972),
+  "CHA" = list(latitude = 41.8299, longitude = -87.6338),
   "CHN" = list(latitude = 41.9484, longitude = -87.6553),
   "CIN" = list(latitude = 39.0979, longitude = -84.5086),
   "CLE" = list(latitude = 41.4959, longitude = -81.6853),
@@ -46,6 +49,7 @@ mlb_teams_lat_long <- list(
   "TOR" = list(latitude = 43.6414, longitude = -79.3894),
   "WAS" = list(latitude = 38.8729, longitude = -77.0060)
 )
+
 
 mlb_dist <- tibble(
   team = names(mlb_teams_lat_long),
