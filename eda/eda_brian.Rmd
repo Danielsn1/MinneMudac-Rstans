@@ -17,6 +17,12 @@ library(ggthemes)
 library(patchwork)
 library(plyr)
 library(sqldf)
+library(readxl)
+library(glmnet)
+library(pls)
+library(randomForest)
+library(e1071)
+
 theme_set(theme_economist())
 ```
 
@@ -30,7 +36,9 @@ game_logs <- read.csv("~/MinneMudac-Rstans/data/GameLogsFixed.csv")
 game_logs <- game_logs %>%
   as_tibble() %>%
   mutate(Date=as.Date(as.character(Date), format="%Y%m%d")) %>%
-  mutate(Attendance=Attendance/1000)
+  mutate(Attendance=Attendance/1000) %>%
+  mutate(Rivalry=MinnisodaCompdata2$`Rivalry Game`) %>%
+  filter(year(Date)!=2020, Attendance>0)
 
 game_logs %>%
   filter(year(Date)==2001) %>%
@@ -40,74 +48,100 @@ game_logs %>%
 str(game_logs)
 ```
 
-```{r twins_streaks_eda1}
-twins_logs <- game_logs %>%
-  filter(HomeTeam=="MIN" | VisitingTeam=="MIN", Attendance>0) %>%
-  mutate(win=ifelse(HomeTeam=="MIN", HomeTeamScore>VistingTeamScore, VistingTeamScore>HomeTeamScore))
 
-countStreaks <- function(wins){
-  streaks <- rep(0, length(wins))
+
+```{r count_streaks}
+countStreaks <- function(results){
+  streaks <- rep(0, length(results))
   count <- 0
-  for (i in 2:length(wins)){
-    if (wins[i-1] == TRUE) {
+  for (i in 2:length(results)){
+    if (results[i-1] == "Win") {
       count = count + 1
-    } else {
+    } else if (results[i-1] == "Loss"){
       count = 0
     }
     streaks[i] = streaks[i] + count
   }
   return(streaks)
 }
-
-twins_logs <- twins_logs %>%
-  mutate(streak = countStreaks(win))
-
-cor(twins_logs$Attendance, twins_logs$streak)
-twins_logs %>%
-  ggplot(aes(x=streak, y= Attendance))+
-  geom_point()+
-  geom_smooth()
 ```
 
-It looks like win streak is not going to be a good predictor of attendance because the correlation is very low and the plot shows an almost horizontal line.
+```{r get_streaks}
+all_logs <- game_logs %>%
+  pivot_longer(cols=c("HomeTeam", "VisitingTeam"), names_to="HomeorAway", values_to="Team") %>%
+  mutate(Result=ifelse(HomeorAway=="HomeTeam", case_when(
+    HomeTeamScore>VistingTeamScore ~ "Win", HomeTeamScore==VistingTeamScore ~ "Tie", HomeTeamScore<VistingTeamScore ~ "Loss"
+  ), case_when(HomeTeamScore>VistingTeamScore ~ "Loss", HomeTeamScore==VistingTeamScore ~ "Tie", HomeTeamScore<VistingTeamScore ~ "Win")))
 
-```{r twins_streaks_eda2}
-twins_logs %>%
-  group_by(streak) %>%
-  ggplot(aes(x=Attendance, y=as.factor(streak)))+
-  geom_boxplot()
+temp_logs <- all_logs[0,]
+for (team in unique(game_logs$HomeTeam)){
+  temp <- all_logs %>%
+    filter(Team==team) %>%
+    mutate(WinStreak=countStreaks(Result))
+  temp_logs <- rbind(temp_logs, temp)
+}
+
+all_logs <- temp_logs %>%
+  select(-Result) %>%
+  pivot_wider(names_from=HomeorAway, values_from=c(Team, WinStreak))
+names(all_logs)[names(all_logs) == 'Team_HomeTeam'] <- 'HomeTeam'
+names(all_logs)[names(all_logs) == 'Team_VisitingTeam'] <- 'VisitingTeam'
 ```
-
-The boxplot shows that from a streak of 1-10 there is not much difference in attendance, but at 11 there is a significant difference in attendance. There is not as much data for streaks of 11, though, so this may not be reliable.
 
 ```{r allteams_streaks}
-all_logs <- twins_logs
-for (team in unique(game_logs$HomeTeam)){
-  temp <- game_logs %>%
-    filter(HomeTeam==team | VisitingTeam==team, Attendance>0) %>%
-    mutate(win=ifelse(HomeTeam==team, HomeTeamScore>VistingTeamScore, VistingTeamScore>HomeTeamScore))
-  temp <- temp %>%
-    mutate(streak=countStreaks(win))%>%
-    filter(HomeTeam==team)
-  all_logs <- rbind(all_logs, temp)
-}
-all_logs <- all_logs %>%
-  select(-win)
-
 (all_logs %>%
-  ggplot(aes(x=Attendance, y=as.factor(streak)))+
+  ggplot(aes(x=Attendance, y=as.factor(WinStreak_HomeTeam)))+
   geom_boxplot()+
-    labs(y="Win Streak")) |
+    labs(y="Home Team Win Streak", x="Attendance(thousands)")) |
 (all_logs %>%
-  ggplot(aes(x=streak, y=Attendance))+
+  ggplot(aes(x=WinStreak_HomeTeam, y=Attendance))+
   geom_point()+
   geom_smooth()+
-   labs(x="Win Streak")) |
-  plot_annotation(title="Relationship Between Win Streaks and Attendance")
-cor(all_logs$Attendance, all_logs$streak)
+   labs(x="Home Team Win Streak", y="Attendance(thousands)")) |
+  plot_annotation(title="Relationship Between Home Team Win Streak and Attendance")
+(all_logs %>%
+  ggplot(aes(x=Attendance, y=as.factor(WinStreak_VisitingTeam)))+
+  geom_boxplot()+
+    labs(y="Visiting Team Win Streak", x="Attendance(thousands)")) |
+(all_logs %>%
+  ggplot(aes(x=WinStreak_VisitingTeam, y=Attendance))+
+  geom_point()+
+  geom_smooth()+
+   labs(x="Visiting Team Win Streak", y="Attendance(thousands)")) |
+  plot_annotation(title="Relationship Between Visiting Team Win Streak and Attendance")
+```
+
+```{r twins_streaks}
+(all_logs %>%
+  filter(HomeTeam=="MIN") %>%
+  ggplot(aes(x=Attendance, y=as.factor(WinStreak_HomeTeam)))+
+  geom_boxplot()+
+    labs(y="Home Team Win Streak", x="Attendance(thousands)")) |
+(all_logs %>%
+  filter(HomeTeam=="MIN") %>%
+  ggplot(aes(x=WinStreak_HomeTeam, y=Attendance))+
+  geom_point()+
+  geom_smooth()+
+   labs(x="Home Team Win Streak", y="Attendance(thousands)")) |
+  plot_annotation(title="Relationship Between Home Team Win Streak and Attendance")
+(all_logs %>%
+  filter(HomeTeam=="MIN") %>%
+  ggplot(aes(x=Attendance, y=as.factor(WinStreak_VisitingTeam)))+
+  geom_boxplot()+
+    labs(y="Visiting Team Win Streak", x="Attendance(thousands)")) |
+(all_logs %>%
+  filter(HomeTeam=="MIN") %>%
+  ggplot(aes(x=WinStreak_VisitingTeam, y=Attendance))+
+  geom_point()+
+  geom_smooth()+
+   labs(x="Visiting Team Win Streak", y="Attendance(thousands)")) |
+  plot_annotation(title="Relationship Between Visiting Team Win Streak and Attendance")
 ```
 
 ```{r twins_visitingteams}
+twins_logs <- game_logs %>%
+  filter(HomeTeam=="MIN")
+
 twins_logs %>%
   ggplot(aes(x=Attendance, y=VisitingTeam))+
   geom_boxplot()+
@@ -145,13 +179,11 @@ park_weather <- sqldf("
 
 
 #Join park_weather and all_logs by ParkID and Date
-all_logs <- all_logs %>%
-  select(names(all_logs)[1:19])
 all_logs <- merge(all_logs, park_weather, by.x=c("Date", "BallParkID"), by.y=c("Date", "ParkID"), all.x=TRUE)
 
 #Create dummy variable for rain/no rain
 all_logs <- all_logs %>%
-  mutate(Rain=ifelse(Prcp>0, 1, 0))
+  mutate(Rain=ifelse(Prcp>1, 1, 0))
 ```
 
 ```{r eda_weather1}
@@ -172,8 +204,56 @@ all_logs <- all_logs %>%
 
 ```{r eda_weather2}
 all_logs %>%
-  filter(!is.na(Prcp), Prcp>0) %>%
+  filter(!is.na(Prcp), Prcp>0, Prcp<7) %>%
   ggplot(aes(x=Prcp, y=Attendance))+
   geom_point()+
-  geom_smooth()
+  geom_smooth()+
+  labs(title="Attendance vs Precipitation", x="Precipitation")
+```
+
+```{r eda_general}
+all_logs <- all_logs %>%
+ mutate(Month=month(Date, label=TRUE))
+all_logs$DayofWeek <- factor(all_logs$DayofWeek, levels=c("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"))
+(all_logs %>%
+  ggplot(aes(x=Month, y=Attendance))+
+  geom_boxplot()+
+  labs(x="", y="Attendance(thousands)")) |
+(all_logs %>%
+  ggplot(aes(x=DayofWeek, y=Attendance))+
+  geom_boxplot()+
+  labs(x="", y="Attendance(thousands)")) |
+  plot_annotation(title="Attendance During Year/Week")
+```
+
+```{r testing_models}
+sample <- sample(c(TRUE, FALSE), nrow(all_logs), replace=TRUE, prob=c(0.7,0.3))
+train  <- all_logs[sample, ]
+test   <- all_logs[!sample, ]
+
+
+# Linear Regression
+lm_model <- lm(Attendance ~ DayofWeek + Month + HomeTeam + VisitingTeam + BallParkID + Rain + WinStreak_HomeTeam + NumberofGames + HomeTeamGameNumber + VisitingTeamGameNumber, data=train)
+summary(lm_model)
+
+# Principal Component Regression
+# pcr_model <- pcr(Attendance ~ DayofWeek + Month + HomeTeam + VisitingTeam + Rivalry + BallParkID + Rain + WinStreak_HomeTeam, data=all_logs)
+# summary(pcr_model)
+# validationplot(pcr_model)
+
+# Lasso Regression
+# y <- all_logs$Attendance
+# x <- data.matrix(all_logs[, c("DayofWeek", "Month", "HomeTeam", "VisitingTeam", "Rivalry")])
+# cv_model <- cv.glmnet(x, y, alpha=1)
+# lam <- cv_model$lambda.min
+# lasso_model <- glmnet(x, y, lambda=lam)
+# coef(lasso_model)
+
+# Random Forest
+rf_model <- randomForest(Attendance ~ DayofWeek + Month + HomeTeam + VisitingTeam + BallParkID + Rain + WinStreak_HomeTeam + NumberofGames + HomeTeamGameNumber + VisitingTeamGameNumber, ntree=100, data=all_logs, na.action=na.omit)
+print(rf_model)
+
+# Naive Bayes
+nb_model <- model <- naiveBayes(Attendance ~ DayofWeek + Month + HomeTeam + VisitingTeam + BallParkID + Rain + WinStreak_HomeTeam + NumberofGames + HomeTeamGameNumber + VisitingTeamGameNumber, data = all_logs)
+summary(nb_model)
 ```
