@@ -1,0 +1,62 @@
+---
+title: "Distance"
+author: "Camden"
+date: "2023-03-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Distance}
+teams <- c("ANA", "ARI", "ATL", "BAL", "BOS", "CHN", "CIN", "CLE",
+           "COL", "DET", "HOU", "KCA", "LAN", "MIA", "MIL", "MIN",
+           "NYA", "NYN", "OAK", "PHI", "PIT", "SDN", "SEA", "SFN",
+           "SLN", "TBA", "TEX", "TOR", "WAS")
+
+mlb_teams_lat_long <- list(
+  "ANA" = list(latitude = 33.8003, longitude = -117.8827),
+  "ARI" = list(latitude = 33.4452, longitude = -112.0667),
+  "ATL" = list(latitude = 33.7340, longitude = -84.3899),
+  "BAL" = list(latitude = 39.2843, longitude = -76.6200),
+  "BOS" = list(latitude = 42.3467, longitude = -71.0972),
+  "CHN" = list(latitude = 41.9484, longitude = -87.6553),
+  "CIN" = list(latitude = 39.0979, longitude = -84.5086),
+  "CLE" = list(latitude = 41.4959, longitude = -81.6853),
+  "COL" = list(latitude = 39.7559, longitude = -104.9942),
+  "DET" = list(latitude = 42.3389, longitude = -83.0483),
+  "HOU" = list(latitude = 29.7572, longitude = -95.3552),
+  "KCA" = list(latitude = 39.0997, longitude = -94.5786),
+  "LAN" = list(latitude = 34.0739, longitude = -118.2400),
+  "MIA" = list(latitude = 25.7785, longitude = -80.2206),
+  "MIL" = list(latitude = 43.0280, longitude = -87.9712),
+  "MIN" = list(latitude = 44.9817, longitude = -93.2778),
+  "NYA" = list(latitude = 40.8296, longitude = -73.9262),
+  "NYN" = list(latitude = 40.7571, longitude = -73.8458),
+  "OAK" = list(latitude = 37.7516, longitude = -122.2005),
+  "PHI" = list(latitude = 39.9056, longitude = -75.1667),
+  "PIT" = list(latitude = 40.4469, longitude = -80.0057),
+  "SDN" = list(latitude = 32.7073, longitude = -117.1564),
+  "SEA" = list(latitude = 47.5914, longitude = -122.3320),
+  "SFN" = list(latitude = 37.7786, longitude = -122.3893),
+  "SLN" = list(latitude = 38.6226, longitude = -90.1928),
+  "TBA" = list(latitude = 27.7683, longitude = -82.6534),
+  "TEX" = list(latitude = 32.7511, longitude = -97.0828),
+  "TOR" = list(latitude = 43.6414, longitude = -79.3894),
+  "WAS" = list(latitude = 38.8729, longitude = -77.0060)
+)
+
+mlb_dist <- tibble(
+  team = names(mlb_teams_lat_long),
+  lat_long = map(mlb_teams_lat_long, ~c(.$latitude, .$longitude))
+)
+
+
+view(mlb_dist)
+
+
+
+
+
+```
