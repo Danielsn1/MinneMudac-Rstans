@@ -36,7 +36,6 @@ game_logs <- read.csv("~/MinneMudac-Rstans/data/GameLogsFixed.csv")
 game_logs <- game_logs %>%
   as_tibble() %>%
   mutate(Date=as.Date(as.character(Date), format="%Y%m%d")) %>%
-  mutate(Attendance=Attendance/1000) %>%
   mutate(Rivalry=MinnisodaCompdata2$`Rivalry Game`) %>%
   filter(year(Date)!=2020, Attendance>0)
 
@@ -92,22 +91,22 @@ names(all_logs)[names(all_logs) == 'Team_VisitingTeam'] <- 'VisitingTeam'
 (all_logs %>%
   ggplot(aes(x=Attendance, y=as.factor(WinStreak_HomeTeam)))+
   geom_boxplot()+
-    labs(y="Home Team Win Streak", x="Attendance(thousands)")) |
+    labs(y="Home Team Win Streak", x="Attendance")) |
 (all_logs %>%
   ggplot(aes(x=WinStreak_HomeTeam, y=Attendance))+
   geom_point()+
   geom_smooth()+
-   labs(x="Home Team Win Streak", y="Attendance(thousands)")) |
+   labs(x="Home Team Win Streak", y="Attendance")) |
   plot_annotation(title="Relationship Between Home Team Win Streak and Attendance")
 (all_logs %>%
   ggplot(aes(x=Attendance, y=as.factor(WinStreak_VisitingTeam)))+
   geom_boxplot()+
-    labs(y="Visiting Team Win Streak", x="Attendance(thousands)")) |
+    labs(y="Visiting Team Win Streak", x="Attendance")) |
 (all_logs %>%
   ggplot(aes(x=WinStreak_VisitingTeam, y=Attendance))+
   geom_point()+
   geom_smooth()+
-   labs(x="Visiting Team Win Streak", y="Attendance(thousands)")) |
+   labs(x="Visiting Team Win Streak", y="Attendance")) |
   plot_annotation(title="Relationship Between Visiting Team Win Streak and Attendance")
 ```
 
@@ -116,25 +115,25 @@ names(all_logs)[names(all_logs) == 'Team_VisitingTeam'] <- 'VisitingTeam'
   filter(HomeTeam=="MIN") %>%
   ggplot(aes(x=Attendance, y=as.factor(WinStreak_HomeTeam)))+
   geom_boxplot()+
-    labs(y="Home Team Win Streak", x="Attendance(thousands)")) |
+    labs(y="Home Team Win Streak", x="Attendance")) |
 (all_logs %>%
   filter(HomeTeam=="MIN") %>%
   ggplot(aes(x=WinStreak_HomeTeam, y=Attendance))+
   geom_point()+
   geom_smooth()+
-   labs(x="Home Team Win Streak", y="Attendance(thousands)")) |
-  plot_annotation(title="Relationship Between Home Team Win Streak and Attendance")
+   labs(x="Home Team Win Streak", y="Attendance")) |
+  plot_annotation(title="Relationship Between Twins Home Team Win Streak and Attendance")
 (all_logs %>%
   filter(HomeTeam=="MIN") %>%
   ggplot(aes(x=Attendance, y=as.factor(WinStreak_VisitingTeam)))+
   geom_boxplot()+
-    labs(y="Visiting Team Win Streak", x="Attendance(thousands)")) |
+    labs(y="Visiting Team Win Streak", x="Attendance")) |
 (all_logs %>%
   filter(HomeTeam=="MIN") %>%
   ggplot(aes(x=WinStreak_VisitingTeam, y=Attendance))+
   geom_point()+
   geom_smooth()+
-   labs(x="Visiting Team Win Streak", y="Attendance(thousands)")) |
+   labs(x="Visiting Team Win Streak", y="Attendance")) |
   plot_annotation(title="Relationship Between Visiting Team Win Streak and Attendance")
 ```
 
@@ -143,9 +142,9 @@ twins_logs <- game_logs %>%
   filter(HomeTeam=="MIN")
 
 twins_logs %>%
-  ggplot(aes(x=Attendance, y=VisitingTeam))+
+  ggplot(aes(x=Attendance, y=reorder(VisitingTeam, Attendance, na.rm=TRUE)))+
   geom_boxplot()+
-  labs(title="Attendance at Twins Home Games")
+  labs(title="Attendance at Twins Home Games", y="Visiting Team")
 ```
 
 ```{r weather_data}
@@ -218,11 +217,11 @@ all_logs$DayofWeek <- factor(all_logs$DayofWeek, levels=c("Sun", "Mon", "Tue", "
 (all_logs %>%
   ggplot(aes(x=Month, y=Attendance))+
   geom_boxplot()+
-  labs(x="", y="Attendance(thousands)")) |
+  labs(x="", y="Attendance")) |
 (all_logs %>%
   ggplot(aes(x=DayofWeek, y=Attendance))+
   geom_boxplot()+
-  labs(x="", y="Attendance(thousands)")) |
+  labs(x="", y="Attendance")) |
   plot_annotation(title="Attendance During Year/Week")
 ```
 
