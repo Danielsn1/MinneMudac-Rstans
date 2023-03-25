@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ```{r load_libraries}
 library(tidyverse)
+library(dplyr)
 library(fpp3)
 library(cowplot)
 library(forcats)
@@ -22,14 +23,80 @@ og_sched <- read.csv("~/data/OriginalSchedulesFixed.csv")
 game_logs <- read.csv("~/data/GameLogsFixed.csv")
 ```
 
+
+
+
+
+
 ```{r eda-gamelogs}
 game_logs %>%
   as_tibble() %>%
   mutate(Date=as.Date(as.character(Date), format="%Y%m%d")) %>%
   filter(year(Date)==2001) %>%
-  ggplot(aes(x=Date, y=Attendance))+
-  geom_point()
+  ggplot(aes(x=Date, y=Attendance)) +
+  geom_point() + 
 ```
+
+
+```{r stacked_hist}
+attendance_all <- game_logs %>% 
+  as_tibble() %>%
+  select(Attendance)
+
+attendance_twins <- game_logs %>% 
+  as_tibble() %>%
+  filter(HomeTeam == 'MIN') %>%
+  select(Attendance)
+
+attendance_wsox <- game_logs %>%
+  as_tibble() %>%
+  filter(HomeTeam == 'CHA') %>%
+  select(Attendance)
+
+attendance_guardians <- game_logs %>%
+  as_tibble() %>%
+  filter(HomeTeam == 'CLE') %>%
+  select(Attendance)
+
+attendance_tigers <- game_logs %>%
+  as_tibble() %>%
+  filter(HomeTeam == 'DET') %>%
+  select(Attendance)
+
+attendance_royals <- game_logs %>%
+  as_tibble() %>%
+  filter(HomeTeam == 'KCA') %>%
+  select(Attendance)
+
+attendance_bind <- bind_rows(
+  attendance_twins %>% mutate(group = "Twins"),
+  attendance_wsox %>% mutate(group = "White Sox"),
+  attendance_guardians %>% mutate(group = "Guardians"),
+  attendance_tigers %>% mutate(group = "Tigers"),
+  attendance_royals %>% mutate(group = "Royals")
+)
+
+ggplot(attendance_bind, aes(x = Attendance, fill = group)) +
+  geom_histogram(position = "identity", alpha = 0.6, bins = 30) +
+  facet_wrap(~group, nrow = 1, scales = "free") +
+  scale_fill_manual(values = c("#F8766D", "#00BFC4", "#E76BF3", "#00CCFF", "#FFC107")) +      theme_economist()+
+  labs(title = "Attendance of MLB teams in the AL Central Division",
+       x = "Value", y = "Frequency", fill = "Group")
+
+#attendance_stacked <- bind_rows(
+ # attendance_all %>% mutate(group = "Entire League"),
+ # attendance_twins %>% mutate(group = "Twins")
+#)
+
+# Create stacked histogram plot
+#ggplot(attendance_stacked, aes(x = Attendance, fill = group)) +
+ # geom_density(position = "stack", bins = 30) +
+ # scale_fill_manual(values = c("#F8766D", "#00BFC4")) +
+ # labs(x = "Value", fill = "Group")
+```
+
+
+
 
 
 Make tsibble for every single team, and then split out home team attendence.
