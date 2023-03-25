@@ -13,6 +13,10 @@ library(GGally)
 library(leaps)
 library(glmnet)
 library(patchwork)
+library(ggthemes)
+library(geosphere)
+
+theme_set(theme_economist())
 ```
 
 
@@ -57,7 +61,7 @@ cleaned_logs <- logs_tsibble%>%
 # Pivoted Tibble
 
 pivoted_logs <- cleaned_logs %>% 
-  pivot_longer(c(VisitingTeam, HomeTeam), names_to = "Visiting_Home", values_to = "Team") %>%
+  pivot_longer(cols = c(VisitingTeam, HomeTeam), names_to = "Visiting_Home", values_to = "Team") %>%
   mutate(GameNumber = ifelse(Visiting_Home == "VisitingTeam", VisitingTeamGameNumber, HomeTeamGameNumber),
          Leauge = ifelse(Visiting_Home == "VisitingTeam", VisitingTeamLeague, HomeTeamLeague)) %>%
   select(-HomeTeamGameNumber, -VisitingTeamGameNumber, -VisitingTeamLeague, -HomeTeamLeague)
@@ -111,40 +115,112 @@ completed_logs <- full_join(total_tibble, pivoted_logs)
 
 box <- completed_logs %>%
   ggplot(aes(x = Attendance, y = as.factor(home_streak))) + 
-  geom_boxplot() 
-hist <- completed_logs %>%
+  geom_boxplot() +
+  labs(y="Length of Home Streak")
+histogram <- completed_logs %>%
   ggplot(aes(x=home_streak)) +
-  geom_histogram()
+  geom_histogram() +
+  labs(x="Home Streak", y="Number of Games")
 
-box/hist
+box + histogram + plot_annotation(title = "Affect of Home Streak on Attendence", subtitle = "For the MLB")
+
+box <- completed_logs %>%
+  filter(Team == "MIN") %>%
+  ggplot(aes(x = Attendance, y = as.factor(home_streak))) + 
+  geom_boxplot() +
+  labs(y="Length of Home Streak")
+histogram <- completed_logs %>%
+  filter(Team == "MIN") %>%
+  ggplot(aes(x=home_streak)) +
+  geom_histogram() +
+  labs(x="Home Streak", y="Number of Games")
+
+box + histogram + plot_annotation(title = "Affect of Home Streak on Attendence", subtitle = "For the Minnesota Twins")
 
 box <- completed_logs %>%
   ggplot(aes(x = Attendance, y = as.factor(away_streak))) + 
-  geom_boxplot() 
-hist <- completed_logs %>%
+  geom_boxplot() +
+  labs(y="Length of Away Streak")
+histogram <- completed_logs %>%
   ggplot(aes(x=away_streak)) +
-  geom_histogram()
-
-box/hist
+  geom_histogram() +
+  labs(x="Away Streak", y="Number of Games")
+box + histogram + plot_annotation(title = "Affect of Away Streak on Attendence")
 
 ```
 
 ```{r distance}
 
-unique(cleaned_logs$BallParkID)
+teams <- c("ANA", "ARI", "ATL", "BAL", "BOS", "CHN", "CIN", "CLE",
+           "COL", "DET", "HOU", "KCA", "LAN", "MIA", "MIL", "MIN",
+           "NYA", "NYN", "OAK", "PHI", "PIT", "SDN", "SEA", "SFN",
+           "SLN", "TBA", "TEX", "TOR", "WAS")
 
-team_locations <- data.frame(
-  team = c("NYN",),
-  team_location = c()
+mlb_teams_lat_long <- list(
+  "ANA" = list(latitude = 33.8003, longitude = -117.8827),
+  "ARI" = list(latitude = 33.4452, longitude = -112.0667),
+  "ATL" = list(latitude = 33.7340, longitude = -84.3899),
+  "BAL" = list(latitude = 39.2843, longitude = -76.6200),
+  "BOS" = list(latitude = 42.3467, longitude = -71.0972),
+  "CHA" = list(latitude = 41.8299, longitude = -87.6338),
+  "CHN" = list(latitude = 41.9484, longitude = -87.6553),
+  "CIN" = list(latitude = 39.0979, longitude = -84.5086),
+  "CLE" = list(latitude = 41.4959, longitude = -81.6853),
+  "COL" = list(latitude = 39.7559, longitude = -104.9942),
+  "DET" = list(latitude = 42.3389, longitude = -83.0483),
+  "HOU" = list(latitude = 29.7572, longitude = -95.3552),
+  "KCA" = list(latitude = 39.0997, longitude = -94.5786),
+  "LAN" = list(latitude = 34.0739, longitude = -118.2400),
+  "MIA" = list(latitude = 25.7785, longitude = -80.2206),
+  "MIL" = list(latitude = 43.0280, longitude = -87.9712),
+  "MIN" = list(latitude = 44.9817, longitude = -93.2778),
+  "NYA" = list(latitude = 40.8296, longitude = -73.9262),
+  "NYN" = list(latitude = 40.7571, longitude = -73.8458),
+  "OAK" = list(latitude = 37.7516, longitude = -122.2005),
+  "PHI" = list(latitude = 39.9056, longitude = -75.1667),
+  "PIT" = list(latitude = 40.4469, longitude = -80.0057),
+  "SDN" = list(latitude = 32.7073, longitude = -117.1564),
+  "SEA" = list(latitude = 47.5914, longitude = -122.3320),
+  "SFN" = list(latitude = 37.7786, longitude = -122.3893),
+  "SLN" = list(latitude = 38.6226, longitude = -90.1928),
+  "TBA" = list(latitude = 27.7683, longitude = -82.6534),
+  "TEX" = list(latitude = 32.7511, longitude = -97.0828),
+  "TOR" = list(latitude = 43.6414, longitude = -79.3894),
+  "WAS" = list(latitude = 38.8729, longitude = -77.0060),
+  "MON" = list(latitude = 45.5017, longitude = -73.5673),
+  "FLO" = list(latitude = 25.7785, longitude = -80.2206)
 )
 
-stadium_locations <- data.frame(
-  stadium = unique(completed_logs$BallParkID),
-  stadium_location = c(c())
-  
+
+mlb_dist <- tibble(
+  Team = names(mlb_teams_lat_long),
+  lon_lat = map(mlb_teams_lat_long, ~c(.$longitude, .$latitude))
 )
 
+distm(mlb_dist$lon_lat$ANA, mlb_dist$lon_lat$CHA, fun = distHaversine)
 
+test <- left_join(completed_logs, mlb_dist, keep=F) %>% 
+  select(-home_streak, -away_streak) %>%
+  mutate(
+    lon = NA,
+    lat = NA
+  ) #%>%
+
+for (i in 1:nrow(test)) {
+  test$lat[i] <- test$lon_lat[[i]][2]
+  test$lon[i] <- test$lon_lat[[i]][1]
+}
+
+test <- test %>%
+  select(-lon_lat) %>%
+  pivot_wider(names_from = Visiting_Home, values_from = c(Team, lon, lat, Leauge, GameNumber)) %>% 
+  mutate(visiting_distance = NA)
+
+for (i in 1:nrow(test)) {
+  test$visiting_distance[i] <- distm(c(test$lon_VisitingTeam[i], test$lat_VisitingTeam[i]), c(test$lon_HomeTeam[i], test$lat_HomeTeam[i]), fun = distHaversine)
+}
+
+#mutate(visiting_distance = distm(c(lon_VisitingTeam, lat_VisitingTeam), c(lon_HomeTeam, lat_HomeTeam), fun = distHaversine))
 
 ```
 
